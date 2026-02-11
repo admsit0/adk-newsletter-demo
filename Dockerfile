@@ -1,25 +1,35 @@
 FROM python:3.11-slim
 
+# Variables para optimizar Python
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 
 WORKDIR /app
 
-# Instalamos curl por si necesitamos debug
+# Instalamos curl para debug y limpieza
 RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
 
+# Instalamos librerías
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
+# Copiamos el código
 COPY . .
 
-# Usuario de seguridad
+# Usuario de seguridad (importante en producción)
 RUN adduser --disabled-password --gecos '' appuser
 USER appuser
 
-# Cloud Run inyecta esta variable (8080)
+# --- CONFIGURACIÓN DE RED ---
+# Cloud Run inyecta PORT=8080, pero lo definimos por si acaso.
 ENV PORT=8080
 
-# --- EL CAMBIO: Usamos modo shell para garantizar que pilla los flags ---
-# Forzamos host 0.0.0.0 (para que Cloud Run entre) y el puerto correcto
-CMD adk web --host 0.0.0.0 --port $PORT main:editor_boss
+# Truco: Muchas herramientas Python (como Uvicorn) leen estas variables automáticamente
+ENV UVICORN_HOST=0.0.0.0
+ENV UVICORN_PORT=8080
+ENV HOST=0.0.0.0
+
+# --- COMANDO DE ARRANQUE ---
+# Usamos "sh -c" explícito para asegurar que las variables se expanden bien.
+# Ponemos los flags AL FINAL, que suele ser más seguro para el parser.
+CMD ["sh", "-c", "adk web main:editor_boss --host 0.0.0.0 --port ${PORT}"]
