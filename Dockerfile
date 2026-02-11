@@ -6,7 +6,7 @@ ENV PYTHONUNBUFFERED=1
 
 WORKDIR /app
 
-# Instalamos curl para debug y limpieza
+# Instalamos curl para debug
 RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
 
 # Instalamos librerías
@@ -16,21 +16,19 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copiamos el código
 COPY . .
 
-# Creamos el usuario
+# Creamos usuario appuser
 RUN adduser --disabled-password --gecos '' appuser
 
-# --- CORRECCIÓN CRÍTICA ---
-# Cambiamos el dueño de la carpeta /app al usuario appuser
-# para que 'adk web' pueda escribir sus archivos temporales.
+# --- PERMISOS (Vital para que no falle al arrancar) ---
 RUN chown -R appuser:appuser /app
 
-# Ahora sí cambiamos de usuario
 USER appuser
 
 # --- CONFIGURACIÓN DE RED ---
 ENV PORT=8080
 ENV HOST=0.0.0.0
 
-# --- COMANDO DE ARRANQUE ---
-# Usamos el modo shell explícito y aseguramos host 0.0.0.0
-CMD ["sh", "-c", "adk web main:editor_boss --host 0.0.0.0 --port ${PORT}"]
+# --- EL CAMBIO DE SINTAXIS ---
+# Antes: adk web main:editor_boss ... (Fallaba porque no es un directorio)
+# Ahora: adk web . ... (Le pasamos el punto '.' que significa "directorio actual")
+CMD ["sh", "-c", "adk web . --host 0.0.0.0 --port ${PORT}"]
