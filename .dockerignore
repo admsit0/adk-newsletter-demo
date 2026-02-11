@@ -1,0 +1,14 @@
+# Git
+.git
+.gitignore
+
+# Python
+__pycache__
+venv/
+.venv/
+*.pyc
+
+# Secrets (NEVER UPLOAD THESE)
+.env
+service_account.json
+*.key

@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>GDG Newsroom Public Feed</title>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --google-blue: #4285f4;
+        --google-red: #ea4335;
+        --google-yellow: #fbbc05;
+        --google-green: #34a853;
+        --bg-color: #f8f9fa;
+      }
+      body {
+        font-family: "Google Sans", sans-serif;
+        background-color: var(--bg-color);
+        margin: 0;
+        padding: 0;
+        color: #202124;
+      }
+      header {
+        background: white;
+        padding: 20px 40px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        display: flex;
+        align-items: center;
+        gap: 15px;
+      }
+      .logo {
+        font-size: 24px;
+        font-weight: 700;
+        color: #5f6368;
+      }
+      .logo span {
+        color: var(--google-blue);
+      }
+
+      .container {
+        max-width: 800px;
+        margin: 40px auto;
+        padding: 0 20px;
+      }
+
+      /* Tarjetas */
+      .card {
+        background: white;
+        border-radius: 12px;
+        padding: 0;
+        margin-bottom: 30px;
+        box-shadow:
+          0 1px 3px rgba(0, 0, 0, 0.12),
+          0 1px 2px rgba(0, 0, 0, 0.24);
+        transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+        overflow: hidden;
+        border-left: 5px solid var(--google-blue); /* Toque de color */
+      }
+      .card:hover {
+        box-shadow:
+          0 14px 28px rgba(0, 0, 0, 0.25),
+          0 10px 10px rgba(0, 0, 0, 0.22);
+        transform: translateY(-2px);
+      }
+
+      .card-header {
+        padding: 20px 30px;
+        border-bottom: 1px solid #f1f3f4;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+      .tag {
+        background-color: #e8f0fe;
+        color: var(--google-blue);
+        padding: 5px 12px;
+        border-radius: 16px;
+        font-size: 12px;
+        font-weight: 500;
+      }
+      .date {
+        color: #5f6368;
+        font-size: 14px;
+      }
+
+      .card-body {
+        padding: 30px;
+        line-height: 1.6;
+      }
+
+      /* Estilos para el contenido Markdown renderizado */
+      .card-body h1 {
+        color: var(--google-blue);
+        font-size: 1.5em;
+      }
+      .card-body h2 {
+        color: #202124;
+        font-size: 1.2em;
+        border-bottom: 2px solid var(--google-yellow);
+        display: inline-block;
+      }
+      .card-body ul {
+        padding-left: 20px;
+      }
+      .card-body li {
+        margin-bottom: 8px;
+      }
+
+      .empty-state {
+        text-align: center;
+        padding: 50px;
+        color: #5f6368;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <div class="logo"><span>G</span>DG Newsroom</div>
+    </header>
+
+    <div class="container">
+      {% if newsletters %} {% for post in newsletters %}
+      <div class="card">
+        <div class="card-header">
+          <span class="tag">Newsletter #{{ post.id }}</span>
+          <span class="date">{{ post.date }}</span>
+        </div>
+        <div class="card-body">{{ post.content | safe }}</div>
+      </div>
+      {% endfor %} {% else %}
+      <div class="empty-state">
+        <h2>📭 Aún no hay noticias</h2>
+        <p>Esperando a que el Agente IA publique algo...</p>
+      </div>
+      {% endif %}
+    </div>
+
+    <script>
+      setTimeout(() => {
+        window.location.reload();
+      }, 5000);
+    </script>
+  </body>
+</html>
