@@ -80,7 +80,7 @@ def publish_to_web(content: str) -> str:
 
 # 1. Definimos los agentes (pero NO los metemos en la lista de tools aún)
 internal_agent = LlmAgent(
-    model="gemini-1.5-flash-001",
+    model="gemini-2.0-flash-001",
     name="internal_data_specialist",
     description="Has access to the private GDG calendar.",
     instruction="Fetch event dates using 'get_upcoming_events'. Do not invent events.",
@@ -88,7 +88,7 @@ internal_agent = LlmAgent(
 )
 
 research_agent = LlmAgent(
-    model="gemini-1.5-flash-001",
+    model="gemini-2.0-flash-001",
     name="research_specialist",
     description="Can search the web and analyze images.",
     instruction="Search the internet using 'google_search'. If given an image, analyze it.",
@@ -131,7 +131,7 @@ def ask_researcher(request: str) -> str:
 # ==========================================
 
 editor_boss = LlmAgent(
-    model="gemini-1.5-flash-001",
+    model="gemini-2.0-flash-001",
     name="editor_in_chief",
     description="Orchestrates the newsletter creation.",
     instruction=(
