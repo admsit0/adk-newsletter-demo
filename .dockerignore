@@ -12,3 +12,7 @@ venv/
 .env
 service_account.json
 *.key
+
+info/
+slides/
+web_public/
