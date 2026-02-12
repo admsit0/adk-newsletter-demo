@@ -7,25 +7,22 @@ from google.adk.agents import LlmAgent
 from google.adk.tools import google_search
 import requests
 
-# Configure logging for "Reasoning Traces" visibility in terminal
-logging.basicConfig(level=logging.INFO)
+# ==========================================
+# CONFIG
+# ==========================================
 
-# Load environment variables
+logging.basicConfig(level=logging.INFO)
 load_dotenv()
 
 # ==========================================
-# 🛠️ CUSTOM TOOLS (The "Hands")
+# INTERNAL DATABASE TOOL
 # ==========================================
 
 def get_upcoming_events(month: str) -> Union[List[Dict], str]:
     """
-    Retrieves confirmed events from the internal GDG database.
-    Deterministic source of truth.
-    
-    Args:
-        month (str): The target month (e.g., "March").
+    Deterministic internal calendar database.
     """
-    # Simulated Internal Database
+
     events_db = {
         "march": [
             {"day": 15, "title": "ADK Hands-on Workshop", "speaker": "GDE Expert"},
@@ -35,117 +32,155 @@ def get_upcoming_events(month: str) -> Union[List[Dict], str]:
             {"day": 10, "title": "Google I/O Extended Watchparty", "speaker": "All"}
         ]
     }
-    
+
     key = month.lower().strip()
-    return events_db.get(key, f"No events found in the internal DB for {month}.")
+    result = events_db.get(key)
+
+    if not result:
+        return f"No events found in internal DB for {month}."
+
+    return result
+
+
+# ==========================================
+# PUBLISH TOOL (DETERMINISTIC)
+# ==========================================
 
 def publish_to_web(content: str) -> str:
     """
-    Publishes the final content to the GDG website UI.
-    CRITICAL: This tool must ONLY be called after explicit user approval.
+    CRITICAL TOOL.
+    Only callable after explicit user approval.
     """
-    print(f"\n[SYSTEM ACTION] 🚀 Sending to Public Web...")
-    
-    # Obtenemos la URL de la variable de entorno (inyectada en el deploy)
+
+    print("\n[SYSTEM ACTION] 🚀 Publishing...")
+
     web_url = os.environ.get("PUBLIC_WEB_URL")
-    
+
     if not web_url:
         return "❌ ERROR: No PUBLIC_WEB_URL configured."
 
     try:
-        # Hacemos la llamada real a la API que acabamos de crear
         response = requests.post(
             f"{web_url}/api/publish",
             json={"content": content},
             timeout=10
         )
-        
+
         if response.status_code == 200:
-            return f"✅ SUCCESS: Published! View it at: {web_url}"
+            return f"✅ SUCCESS: Published at {web_url}"
         else:
             return f"❌ ERROR: Web returned {response.status_code}"
-            
+
     except Exception as e:
         return f"❌ ERROR: Connection failed: {str(e)}"
 
-# ==========================================
-# 🤖 SPECIALIST AGENTS (The "Team")
-# ==========================================
-
-# ... (Imports y herramientas get_upcoming_events/publish_to_web siguen igual) ...
 
 # ==========================================
-# 🤖 SPECIALIST AGENTS (The "Team")
+# SPECIALIST AGENTS
 # ==========================================
 
-# 1. Definimos los agentes (pero NO los metemos en la lista de tools aún)
 internal_agent = LlmAgent(
     model="gemini-2.0-flash-001",
     name="internal_data_specialist",
-    description="Has access to the private GDG calendar.",
-    instruction="Fetch event dates using 'get_upcoming_events'. Do not invent events.",
+    description="Read-only access to internal GDG calendar.",
+    instruction="""
+You are a deterministic internal data specialist.
+
+RULES:
+- Always use 'get_upcoming_events' when asked about events.
+- Never invent data.
+- Return clean structured output.
+- No marketing tone.
+- No commentary.
+""",
     tools=[get_upcoming_events]
 )
+
 
 research_agent = LlmAgent(
     model="gemini-2.0-flash-001",
     name="research_specialist",
-    description="Can search the web and analyze images.",
-    instruction="Search the internet using 'google_search'. If given an image, analyze it.",
+    description="Performs structured web research.",
+    instruction="""
+You are a research specialist.
+
+RULES:
+- Use 'google_search' for external information.
+- Summarize clearly.
+- Do not fabricate information.
+- If search fails, report failure explicitly.
+- Keep output concise and factual.
+""",
     tools=[google_search]
 )
 
-# 2. CREAMOS LAS FUNCIONES PUENTE (Esto arregla el error)
-# El Jefe llamará a estas funciones, y estas funciones invocarán a los agentes.
-
-def ask_internal_specialist(request: str) -> str:
-    """
-    Call this to ask the Internal Data Specialist about calendar/database events.
-    Args:
-        request (str): The question for the specialist (e.g., 'Events in March').
-    """
-    # Invocamos al agente manualmente. 
-    # NOTA: Usamos una llamada directa simulada o el método que tenga tu versión.
-    # Si falla, simplemente devolvemos la respuesta del agente.
-    try:
-        # Intentamos ejecutar el agente con el prompt
-        return internal_agent.route(request) # .route() o .run() suele ser el método
-    except:
-        # Fallback seguro si la librería cambia: devolvemos un string fijo para la demo
-        # O llamamos a la herramienta directamente si el agente falla.
-        return str(get_upcoming_events("march")) # Fallback de emergencia
-
-def ask_researcher(request: str) -> str:
-    """
-    Call this to ask the Researcher to search the web or analyze an image.
-    Args:
-        request (str): The research task.
-    """
-    try:
-        return research_agent.route(request)
-    except:
-        return "Research agent unavailable via tool wrapper."
 
 # ==========================================
-# 🧠 THE ORCHESTRATOR (The "Boss")
+# SUPERVISOR / ORCHESTRATOR
 # ==========================================
 
 editor_boss = LlmAgent(
     model="gemini-2.0-flash-001",
     name="editor_in_chief",
-    description="Orchestrates the newsletter creation.",
-    instruction=(
-        "You are the Editor-in-Chief. "
-        "Your goal is to produce a high-quality Markdown newsletter.\n"
-        "PIPELINE:\n"
-        "1. Ask the specialists: Use 'ask_internal_specialist' for dates and 'ask_researcher' for news.\n"
-        "2. Draft the newsletter in Markdown.\n"
-        "3. Ask user 'Ready to publish?'.\n"
-        "4. Call 'publish_to_web' ONLY if approved."
-    ),
-    # AHORA SÍ: Le pasamos las FUNCIONES, no los objetos.
-    tools=[ask_internal_specialist, ask_researcher, publish_to_web]
+    description="Supervises specialist agents to build the newsletter.",
+    instruction="""
+You are the Editor-in-Chief supervising two specialist agents:
+
+- internal_data_specialist
+- research_specialist
+
+You must coordinate them.
+
+=====================
+PHASE 1 — PLANNING
+=====================
+Analyze the user request.
+Decide which specialist to delegate to.
+
+If events → delegate to internal_data_specialist.
+If external news/trends → delegate to research_specialist.
+
+Never answer directly if delegation is required.
+
+=====================
+PHASE 2 — SYNTHESIS
+=====================
+After receiving specialist outputs, compose a Markdown newsletter:
+
+# GDG Monthly Newsletter
+## Upcoming Events
+## Community & Tech News
+## Closing Notes
+
+Professional, clean, structured.
+
+=====================
+PHASE 3 — CONFIRMATION
+=====================
+Ask:
+Ready to publish?
+
+Do NOT publish yet.
+
+=====================
+PHASE 4 — PUBLICATION
+=====================
+Only if user explicitly says YES:
+Call publish_to_web with the exact Markdown.
+Never modify after approval.
+
+=====================
+STRICT RULES
+=====================
+- Never invent data.
+- Always delegate when required.
+- Never publish without approval.
+- Specialists are the source of truth.
+""",
+    tools=[publish_to_web],
+    sub_agents=[internal_agent, research_agent]   # 🔥 THIS is the correct multi-agent pattern
 )
 
-# --- ADK ENTRY POINT ---
+
+# ADK ENTRY POINT
 root_agent = editor_boss
