@@ -1,63 +1,62 @@
 import os
 import logging
-from typing import Dict, Union, List
+from typing import Dict, Union, List, Any
 
 from dotenv import load_dotenv
 from google.adk.agents import LlmAgent
 from google.adk.tools import google_search
+from google.genai import Client # Usamos el cliente directo para los sub-agentes
 import requests
 
-# ==========================================
-# CONFIG
-# ==========================================
-
+# Configuración de logs para ver la "Traza de Razonamiento"
 logging.basicConfig(level=logging.INFO)
 load_dotenv()
 
 # ==========================================
-# INTERNAL DATABASE TOOL
+# 🛠️ NIVEL 1: HERRAMIENTAS DETERMINISTAS (IO TOOLS)
 # ==========================================
 
-def get_upcoming_events(month: str) -> Union[List[Dict], str]:
+def get_upcoming_events(month: str) -> str:
     """
-    Deterministic internal calendar database.
+    CONSULTA OBLIGATORIA para fechas de eventos.
+    Accede a la base de datos privada del GDG UAM.
+    
+    Args:
+        month (str): El mes a consultar (ej: 'Marzo', 'Abril').
     """
-
+    # Base de datos simulada con sabor "GDG UAM"
     events_db = {
-        "march": [
-            {"day": 15, "title": "ADK Hands-on Workshop", "speaker": "GDE Expert"},
-            {"day": 28, "title": "Women Techmakers Dinner", "speaker": "Community"}
+        "marzo": [
+            {"dia": 14, "titulo": "Taller de Agentes con Google ADK", "speaker": "Tu (GDE)", "tipo": "Workshop"},
+            {"dia": 21, "titulo": "Cervezas & Networking en la Cantina", "speaker": "Comunidad", "tipo": "Social"},
+            {"dia": 28, "titulo": "Women Techmakers: Panel de Liderazgo", "speaker": "Invitadas Top", "tipo": "Panel"}
         ],
-        "april": [
-            {"day": 10, "title": "Google I/O Extended Watchparty", "speaker": "All"}
+        "abril": [
+            {"dia": 11, "titulo": "Google I/O Extended Watchparty", "speaker": "Sundar Pichai (Streaming)", "tipo": "Keynote"}
         ]
     }
-
+    
     key = month.lower().strip()
-    result = events_db.get(key)
-
-    if not result:
-        return f"No events found in internal DB for {month}."
-
-    return result
-
-
-# ==========================================
-# PUBLISH TOOL (DETERMINISTIC)
-# ==========================================
+    data = events_db.get(key)
+    
+    if not data:
+        return f"INFO: No hay eventos confirmados en la base de datos interna para {month}."
+    
+    return str(data)
 
 def publish_to_web(content: str) -> str:
     """
-    CRITICAL TOOL.
-    Only callable after explicit user approval.
+    ACCIÓN DE ALTO RIESGO: Publica contenido en la web pública.
+    REQUIERE APROBACIÓN EXPLÍCITA DEL USUARIO (Human-in-the-Loop).
+    
+    Args:
+        content (str): El contenido final en HTML o Markdown a publicar.
     """
-
-    print("\n[SYSTEM ACTION] 🚀 Publishing...")
-
+    print(f"\n[SYSTEM ACTION] 🚀 Iniciando protocolo de publicación...")
+    
     web_url = os.environ.get("PUBLIC_WEB_URL")
-
     if not web_url:
-        return "❌ ERROR: No PUBLIC_WEB_URL configured."
+        return "❌ ERROR TÉCNICO: Variable PUBLIC_WEB_URL no configurada en el entorno."
 
     try:
         response = requests.post(
@@ -65,122 +64,132 @@ def publish_to_web(content: str) -> str:
             json={"content": content},
             timeout=10
         )
-
         if response.status_code == 200:
-            return f"✅ SUCCESS: Published at {web_url}"
+            return f"✅ ÉXITO: Newsletter publicada correctamente en {web_url}"
         else:
-            return f"❌ ERROR: Web returned {response.status_code}"
-
+            return f"❌ ERROR API: El servidor web respondió {response.status_code}"
     except Exception as e:
-        return f"❌ ERROR: Connection failed: {str(e)}"
-
-
-# ==========================================
-# SPECIALIST AGENTS
-# ==========================================
-
-internal_agent = LlmAgent(
-    model="gemini-2.0-flash-001",
-    name="internal_data_specialist",
-    description="Read-only access to internal GDG calendar.",
-    instruction="""
-You are a deterministic internal data specialist.
-
-RULES:
-- Always use 'get_upcoming_events' when asked about events.
-- Never invent data.
-- Return clean structured output.
-- No marketing tone.
-- No commentary.
-""",
-    tools=[get_upcoming_events]
-)
-
-
-research_agent = LlmAgent(
-    model="gemini-2.0-flash-001",
-    name="research_specialist",
-    description="Performs structured web research.",
-    instruction="""
-You are a research specialist.
-
-RULES:
-- Use 'google_search' for external information.
-- Summarize clearly.
-- Do not fabricate information.
-- If search fails, report failure explicitly.
-- Keep output concise and factual.
-""",
-    tools=[google_search]
-)
-
+        return f"❌ ERROR CONEXIÓN: {str(e)}"
 
 # ==========================================
-# SUPERVISOR / ORCHESTRATOR
+# 🕵️ NIVEL 2: AGENTES ESPECIALISTAS (AGENTS AS TOOLS)
+# ==========================================
+# Estrategia: Encapsulamos la "personalidad" del agente en una función.
+# Esto evita errores de serialización y garantiza que el Jefe reciba texto limpio.
+
+def consult_internal_specialist(question: str) -> str:
+    """
+    Llama al 'Especialista de Datos Internos'.
+    Úsalo para interpretar fechas, horarios o detalles logísticos de eventos propios.
+    NO tiene acceso a internet.
+    
+    Args:
+        question (str): La pregunta sobre la agenda interna (ej: "¿Qué eventos hay en marzo y quién da la charla?").
+    """
+    try:
+        # 1. Obtenemos datos crudos (RAG simplificado)
+        raw_data = get_upcoming_events("marzo") + get_upcoming_events("abril")
+        
+        # 2. El sub-agente procesa los datos
+        client = Client(api_key=os.environ.get("GOOGLE_API_KEY"))
+        response = client.models.generate_content(
+            model='gemini-2.0-flash',
+            contents=f"""
+            Eres el Gestor de Agenda del GDG. Tu trabajo es ser preciso y formal.
+            DATOS DE LA DB: {raw_data}
+            PREGUNTA DEL JEFE: {question}
+            
+            Instrucciones:
+            - Extrae solo la info relevante.
+            - Si no hay datos, dilo claramente.
+            - No inventes nada que no esté en la DB.
+            """
+        )
+        return f"[REPORTE INTERNO]: {response.text}"
+    except Exception as e:
+        return f"❌ Error en Especialista Interno: {str(e)}"
+
+def consult_researcher(topic: str) -> str:
+    """
+    Llama al 'Investigador Tecnológico'.
+    Úsalo para buscar noticias externas, tendencias o explicar conceptos técnicos.
+    Tiene acceso a Google Search.
+    
+    Args:
+        topic (str): El tema a investigar (ej: "Novedades de Gemini 1.5" o "Resumen de la imagen adjunta").
+    """
+    try:
+        # Usamos el cliente con la herramienta de búsqueda integrada
+        client = Client(api_key=os.environ.get("GOOGLE_API_KEY"))
+        
+        # Configuramos la herramienta de búsqueda para este sub-agente
+        # Nota: En versiones recientes de GenAI SDK, esto se configura así:
+        response = client.models.generate_content(
+            model='gemini-2.0-flash',
+            contents=f"""
+            Eres un Investigador Tech para una newsletter universitaria.
+            Tarea: Investiga sobre '{topic}'.
+            
+            Estilo:
+            - Busca lo más reciente (2024-2025).
+            - Resume en 3 puntos clave.
+            - Sé breve, el Editor expandirá luego.
+            """,
+            config={
+                'tools': [{'google_search': {}}] 
+            }
+        )
+        return f"[REPORTE EXTERNO]: {response.text}"
+    except Exception as e:
+        return f"❌ Error en Investigador: {str(e)} (Verifica GOOGLE_API_KEY)"
+
+# ==========================================
+# 🎩 NIVEL 3: EL ORQUESTADOR (BOSS)
 # ==========================================
 
 editor_boss = LlmAgent(
-    model="gemini-2.0-flash-001",
-    name="editor_in_chief",
-    description="Supervises specialist agents to build the newsletter.",
+    model="gemini-1.5-pro-002", # Usamos el modelo Pro para mejor razonamiento
+    name="gdg_editor_in_chief",
+    description="Orquestador principal de la GDG Newsroom.",
     instruction="""
-You are the Editor-in-Chief supervising two specialist agents:
+    Eres el **Editor Jefe** de la Newsletter del GDG UAM (Universidad Autónoma de Madrid).
+    
+    🎯 **TU OBJETIVO:**
+    Crear y publicar la newsletter mensual coordinando a tu equipo de especialistas.
+    
+    👥 **TU EQUIPO (HERRAMIENTAS):**
+    1. `consult_internal_specialist`: Para fechas y eventos nuestros.
+    2. `consult_researcher`: Para noticias del mundo tech (Google, AI, Web).
+    3. `publish_to_web`: Para enviar el HTML final a la web (SOLO CON PERMISO).
 
-- internal_data_specialist
-- research_specialist
-
-You must coordinate them.
-
-=====================
-PHASE 1 — PLANNING
-=====================
-Analyze the user request.
-Decide which specialist to delegate to.
-
-If events → delegate to internal_data_specialist.
-If external news/trends → delegate to research_specialist.
-
-Never answer directly if delegation is required.
-
-=====================
-PHASE 2 — SYNTHESIS
-=====================
-After receiving specialist outputs, compose a Markdown newsletter:
-
-# GDG Monthly Newsletter
-## Upcoming Events
-## Community & Tech News
-## Closing Notes
-
-Professional, clean, structured.
-
-=====================
-PHASE 3 — CONFIRMATION
-=====================
-Ask:
-Ready to publish?
-
-Do NOT publish yet.
-
-=====================
-PHASE 4 — PUBLICATION
-=====================
-Only if user explicitly says YES:
-Call publish_to_web with the exact Markdown.
-Never modify after approval.
-
-=====================
-STRICT RULES
-=====================
-- Never invent data.
-- Always delegate when required.
-- Never publish without approval.
-- Specialists are the source of truth.
-""",
-    tools=[publish_to_web],
-    sub_agents=[internal_agent, research_agent]   # 🔥 THIS is the correct multi-agent pattern
+    📝 **ESTRATEGIA DE COORDINACIÓN (Paso a Paso):**
+    
+    **FASE 1: INVESTIGACIÓN (Gathering)**
+    - Primero, pregunta al especialista interno qué eventos tenemos este mes.
+    - Segundo, pide al investigador una noticia "trending topic" para la intro.
+    - *Nota:* Si el usuario sube una imagen, descríbela y pásale la descripción al investigador.
+    
+    **FASE 2: REDACCIÓN (Drafting)**
+    - Escribe la newsletter en formato Markdown.
+    - **TONO:** Universitario, energético, inclusivo, con emojis (🚀, 🐍, ☁️).
+    - **ESTRUCTURA:**
+      1. Intro ("¡Hola GDGers! 👋").
+      2. La Noticia Tech de la semana (breve).
+      3. 📅 AGENDA UAM (Usa los datos internos).
+      4. Call to Action ("¡Apúntate ya!").
+    
+    **FASE 3: CONTROL DE CALIDAD (Human-in-the-Loop)**
+    - Muestra el borrador al usuario.
+    - 🛑 **DETENTE Y PREGUNTA:** "¿Te parece bien? ¿La publico?"
+    - Si el usuario dice "SÍ" -> Llama a `publish_to_web`.
+    - Si el usuario dice "NO" -> Pregunta qué cambiar y vuelve a la Fase 2.
+    
+    ⚠️ **REGLA DE ORO:** NUNCA llames a `publish_to_web` sin ver un "Sí" explícito del usuario.
+    """,
+    # Aquí pasamos las funciones wrapper que creamos arriba
+    tools=[consult_internal_specialist, consult_researcher, publish_to_web]
 )
 
-
-# ADK ENTRY POINT
+# --- ADK ENTRY POINT ---
+# Esta variable es la que busca el comando 'adk web'
 root_agent = editor_boss
