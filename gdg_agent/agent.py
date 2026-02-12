@@ -121,3 +121,5 @@ editor_boss = LlmAgent(
     # The Boss uses the other agents AND the final action tool
     tools=[internal_agent, research_agent, publish_to_web]
 )
+
+root_agent = editor_boss
