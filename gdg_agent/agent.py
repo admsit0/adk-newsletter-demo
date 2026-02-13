@@ -107,7 +107,7 @@ def ask_internal_data(query: str) -> str:
     """
     print(f"\n[ORCHESTRATOR] 📞 Llamando a Internal Agent...")
     try:
-        return internal_agent.route(query)
+        return internal_agent.run(query)
     except Exception as e:
         return f"❌ Error interno: {str(e)}"
 
@@ -118,7 +118,7 @@ def ask_researcher(topic: str) -> str:
     """
     print(f"\n[ORCHESTRATOR] 📞 Llamando a Researcher Agent...")
     try:
-        return research_agent.route(topic)
+        return research_agent.run(topic)
     except Exception as e:
         return f"❌ Error investigador: {str(e)}"
 
