@@ -8,11 +8,10 @@ venv/
 .venv/
 *.pyc
 
+theory/
+web_public/
+
 # Secrets (NEVER UPLOAD THESE)
 .env
 service_account.json
 *.key
-
-info/
-slides/
-web_public/

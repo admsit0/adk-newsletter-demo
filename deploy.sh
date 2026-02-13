@@ -1,5 +1,5 @@
 #!/bin/bash
-PROJECT_ID="project-c809664c-efec-464a-9ea"
+PROJECT_ID=$(gcloud config get-value project)
 REGION="europe-southwest1"
 SERVICE_NAME_WEB="gdg-public-web"
 SERVICE_NAME_AGENT="gdg-newsroom-agent"
