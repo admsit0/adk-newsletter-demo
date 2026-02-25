@@ -4,7 +4,6 @@ import markdown
 
 app = Flask(__name__)
 
-# Memoria volátil (lista simple)
 newsletters = []
 
 @app.route('/')
@@ -15,20 +14,21 @@ def home():
 def publish():
     data = request.json
     content_md = data.get('content', '')
+    post_type = data.get('post_type', 'Newsletter') # Por defecto Newsletter si falla
     
-    # Convertimos Markdown a HTML para que se vea bonito
     content_html = markdown.markdown(content_md)
     
     new_post = {
         "id": len(newsletters) + 1,
-        "content": content_html, # Guardamos el HTML renderizado
+        "type": post_type, # Guardamos el tipo de publicación
+        "content": content_html,
         "date": datetime.now().strftime("%d %b %Y, %H:%M"),
         "author": "GDG AI Editor"
     }
     
-    # Insertamos al principio para que salga la primera
     newsletters.insert(0, new_post)
-    return jsonify({"status": "success", "message": "Published!"}), 200
+    return jsonify({"status": "success", "message": "Published!", "post": new_post}), 200
+
 
 # if __name__ == '__main__':
 #     app.run(host='0.0.0.0', port=8080)

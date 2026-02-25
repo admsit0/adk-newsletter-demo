@@ -81,6 +81,14 @@
         font-size: 12px;
         font-weight: 500;
       }
+      .tag-evento {
+        background-color: #e8f0fe;
+        color: var(--google-blue);
+      }
+      .tag-blog {
+        background-color: #fce8e6;
+        color: var(--google-red);
+      }
       .date {
         color: #5f6368;
         font-size: 14px;
@@ -125,7 +133,11 @@
       {% if newsletters %} {% for post in newsletters %}
       <div class="card">
         <div class="card-header">
-          <span class="tag">Newsletter #{{ post.id }}</span>
+          <span
+            class="tag {% if post.type == 'Evento' %}tag-evento{% else %}tag-blog{% endif %}"
+          >
+            {{ post.type }} #{{ post.id }}
+          </span>
           <span class="date">{{ post.date }}</span>
         </div>
         <div class="card-body">{{ post.content | safe }}</div>
