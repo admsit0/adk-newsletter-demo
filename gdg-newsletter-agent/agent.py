@@ -14,7 +14,7 @@ logging.basicConfig(level=logging.INFO)
 load_dotenv()
 
 editor_boss = LlmAgent(
-    model="gemini-1.5-pro-002",
+    model="gemini-2.5-flash",
     name="gdg_editor_boss",
     description="Editor Jefe. Orquesta al equipo y gestiona la publicación final.",
     instruction="""
