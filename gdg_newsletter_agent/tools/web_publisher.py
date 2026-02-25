@@ -1,14 +1,18 @@
 import os
 import requests
+from gdg_newsletter_agent.tools.image_generator import image_cache
 
 def publish_to_web(content: str, post_type: str) -> str:
     """
     Publica el contenido final en la web. SOLO EJECUTAR CON PERMISO EXPLICITO DEL USUARIO.
-    Args:
-        content: El contenido del post en formato Markdown.
-        post_type: El tipo de publicación. DEBE SER estrictamente "Evento" o "Blog".
     """
     print(f"\n[SYSTEM ACTION] 🚀 Ejecutando publicación en web (Tipo: {post_type})...")
+    
+    # MAGIA: Intercambiamos el ID ligero por el Base64 real antes de mandarlo a la web
+    for img_id, base64_data in image_cache.items():
+        if img_id in content:
+            content = content.replace(img_id, base64_data)
+            
     web_url = os.environ.get("PUBLIC_WEB_URL")
     
     if not web_url:
