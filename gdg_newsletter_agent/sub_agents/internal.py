@@ -1,5 +1,5 @@
 from google.adk.agents import LlmAgent
-from tools.internal_db import get_upcoming_events
+from gdg_newsletter_agent.tools.internal_db import get_upcoming_events
 
 internal_specialist = LlmAgent(
     model="gemini-2.5-flash",

@@ -2,12 +2,11 @@ import logging
 from dotenv import load_dotenv
 from google.adk.agents import LlmAgent
 
-from .tools.web_publisher import publish_to_web
+from gdg_newsletter_agent.tools.web_publisher import publish_to_web
 
-# Importamos a TODO el equipo
-from .sub_agents.internal import internal_specialist
-from .sub_agents.researcher import tech_researcher
-from .sub_agents.designer import graphic_designer # <-- ¡Nuevo empleado!
+from gdg_newsletter_agent.sub_agents.internal import internal_specialist
+from gdg_newsletter_agent.sub_agents.researcher import tech_researcher
+from gdg_newsletter_agent.sub_agents.designer import graphic_designer
 
 logging.basicConfig(level=logging.INFO)
 load_dotenv()
