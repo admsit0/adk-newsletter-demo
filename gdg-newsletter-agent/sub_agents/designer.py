@@ -1,5 +1,5 @@
 from google.adk.agents import LlmAgent
-from tools.image_generator import generate_newsletter_image
+from ..tools.image_generator import generate_newsletter_image
 
 graphic_designer = LlmAgent(
     model="gemini-2.5-flash",
